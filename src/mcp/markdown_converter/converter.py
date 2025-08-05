@@ -85,7 +85,7 @@ class MarkdownConverter:
                 i = self._add_table(doc, lines, i)
                 continue
                 
-            doc.add_paragraph(line)
+            self._add_formatted_paragraph(doc, line)
             i += 1
             
     def _add_code_block(self, doc: Document, lines: list, start_idx: int) -> int:
@@ -158,3 +158,36 @@ class MarkdownConverter:
                         run.bold = True
                         
         return i
+    
+    def _add_formatted_paragraph(self, doc: Document, text: str) -> None:
+        """Add paragraph with inline markdown formatting."""
+        para = doc.add_paragraph()
+        self._process_inline_formatting(para, text)
+    
+    def _process_inline_formatting(self, para, text: str) -> None:
+        """Process inline markdown formatting in text."""
+        # Pattern for markdown formatting: **bold**, *italic*, `code`, ~~strike~~
+        pattern = r'(\*\*.*?\*\*)|(\*.*?\*)|(~~.*?~~)|(`.+?`)|([^*~`]+)'
+        
+        for match in re.finditer(pattern, text):
+            content = match.group(0)
+            
+            if content.startswith('**') and content.endswith('**'):
+                # Bold text
+                run = para.add_run(content[2:-2])
+                run.bold = True
+            elif content.startswith('*') and content.endswith('*'):
+                # Italic text
+                run = para.add_run(content[1:-1])
+                run.italic = True
+            elif content.startswith('~~') and content.endswith('~~'):
+                # Strikethrough text
+                run = para.add_run(content[2:-2])
+                run.font.strike = True
+            elif content.startswith('`') and content.endswith('`'):
+                # Inline code
+                run = para.add_run(content[1:-1])
+                run.font.name = 'Courier New'
+            else:
+                # Regular text
+                para.add_run(content)
