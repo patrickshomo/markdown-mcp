@@ -1,5 +1,9 @@
 """Test script for the markdown converter."""
 
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
 from src.mcp.markdown_converter.converter import MarkdownConverter
 
 

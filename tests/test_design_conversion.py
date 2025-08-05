@@ -1,13 +1,16 @@
 """Test converting the design-input.md file to Word."""
 
-from src.mcp.markdown_converter.converter import MarkdownConverter
+import sys
 from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+
+from src.mcp.markdown_converter.converter import MarkdownConverter
 
 
 def test_design_conversion():
     """Convert design-input.md to Word document."""
     # Read the design input file
-    design_file = Path("design/design-input.md")
+    design_file = Path("../design/design-input.md")
     
     if not design_file.exists():
         print(f"Design file not found: {design_file}")
