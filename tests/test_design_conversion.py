@@ -10,7 +10,7 @@ from src.mcp.markdown_converter.converter import MarkdownConverter
 def test_design_conversion():
     """Convert design-input.md to Word document."""
     # Read the design input file
-    design_file = Path("../design/design-input.md")
+    design_file = Path(__file__).parent.parent / "design" / "design-input.md"
     
     if not design_file.exists():
         print(f"Design file not found: {design_file}")
@@ -31,8 +31,8 @@ def test_design_conversion():
     doc = converter.convert(markdown_content, metadata)
     
     # Save output
-    output_path = "design-input.docx"
-    doc.save(output_path)
+    output_path = Path(__file__).parent / "output" / "design-input.docx"
+    doc.save(str(output_path))
     print(f"Design document converted and saved as: {output_path}")
 
 

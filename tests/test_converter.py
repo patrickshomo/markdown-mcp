@@ -28,8 +28,9 @@ Another paragraph."""
     doc = converter.convert(markdown_content, {"title": "Test Doc", "author": "Test User"})
     
     # Save test output
-    doc.save("test_output.docx")
-    print("Test document saved as test_output.docx")
+    output_path = Path(__file__).parent / "output" / "test_output.docx"
+    doc.save(str(output_path))
+    print(f"Test document saved as {output_path}")
 
 
 if __name__ == "__main__":
