@@ -1,0 +1,12 @@
+[project]
+name = "markdown-mcp"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=2.11.1",
+    "markdown>=3.8.2",
+    "pymdown-extensions>=10.16.1",
+    "python-docx>=1.2.0",
+]
