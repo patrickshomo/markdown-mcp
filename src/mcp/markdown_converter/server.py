@@ -1,19 +1,22 @@
 """FastMCP server for markdown to Word conversion."""
 
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from pathlib import Path
 import tempfile
 import os
 
 from fastmcp import FastMCP
-from converter import MarkdownConverter
+from .converter import MarkdownConverter
+from .template_manager import TemplateManager
+from .batch_processor import BatchProcessor
 
 
 # Initialize MCP server
 mcp = FastMCP("Markdown to Word Converter")
 
-# Template directory
-TEMPLATE_DIR = Path(__file__).parent / "templates"
+# Initialize components
+template_manager = TemplateManager()
+batch_processor = BatchProcessor()
 
 
 @mcp.tool()  # MCP_FUNCTION
@@ -36,16 +39,11 @@ def convert_markdown_to_docx(
         Path to the generated Word document
     """
     try:
-        # Get template path if specified
-        template_path = None
-        if template_name:
-            template_path = str(TEMPLATE_DIR / f"{template_name}.docx")
-            
         # Initialize converter
-        converter = MarkdownConverter(template_path)
+        converter = MarkdownConverter()
         
         # Convert markdown to document
-        doc = converter.convert(markdown_content, metadata)
+        doc = converter.convert(markdown_content, metadata, template_name)
         
         # Determine output path
         if not output_path:
@@ -63,26 +61,58 @@ def convert_markdown_to_docx(
 
 
 @mcp.tool()  # MCP_FUNCTION
-def list_available_templates() -> str:
+def list_available_templates() -> List[Dict[str, str]]:
     """
     List all available Word templates.
     
     Returns:
-        List of available template names
+        List of template dictionaries with name, path, and type
     """
-    try:
-        if not TEMPLATE_DIR.exists():
-            return "No templates directory found"
-            
-        templates = [f.stem for f in TEMPLATE_DIR.glob("*.docx")]
+    return template_manager.list_templates()
+
+
+@mcp.tool()  # MCP_FUNCTION
+def batch_convert_directory(
+    input_dir: str,
+    output_dir: str,
+    template_name: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Convert all markdown files in a directory to Word documents.
+    
+    Args:
+        input_dir: Directory containing markdown files
+        output_dir: Directory to save Word documents
+        template_name: Optional template name
+        metadata: Optional document metadata
         
-        if not templates:
-            return "No templates available"
-            
-        return f"Available templates: {', '.join(templates)}"
+    Returns:
+        Batch processing results
+    """
+    return batch_processor.process_directory(input_dir, output_dir, template_name, metadata)
+
+
+@mcp.tool()  # MCP_FUNCTION
+def batch_convert_files(
+    file_paths: List[str],
+    output_dir: str,
+    template_name: Optional[str] = None,
+    metadata: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Convert specific markdown files to Word documents.
+    
+    Args:
+        file_paths: List of markdown file paths
+        output_dir: Directory to save Word documents
+        template_name: Optional template name
+        metadata: Optional document metadata
         
-    except Exception as e:
-        return f"Error listing templates: {str(e)}"
+    Returns:
+        Batch processing results
+    """
+    return batch_processor.process_files(file_paths, output_dir, template_name, metadata)
 
 
 @mcp.tool()  # MCP_FUNCTION

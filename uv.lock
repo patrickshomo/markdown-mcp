@@ -516,6 +516,7 @@ dependencies = [
     { name = "pymdown-extensions" },
     { name = "pytest" },
     { name = "python-docx" },
+    { name = "requests" },
 ]
 
 [package.metadata]
@@ -525,6 +526,7 @@ requires-dist = [
     { name = "pymdown-extensions", specifier = ">=10.16.1" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "python-docx", specifier = ">=1.2.0" },
+    { name = "requests", specifier = ">=2.32.4" },
 ]
 
 [[package]]

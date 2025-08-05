@@ -6,25 +6,41 @@ from docx.shared import Inches
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from pathlib import Path
 import re
+from .template_manager import TemplateManager
+from .image_handler import ImageHandler
+from .mermaid_handler import MermaidHandler
 
 
 class MarkdownConverter:
     """Converts markdown content to Word documents."""
     
-    def __init__(self, template_path: Optional[str] = None):
+    def __init__(self, template_path: Optional[str] = None, template_dirs: Optional[list] = None, base_path: Optional[str] = None):
         self.template_path = template_path
+        self.template_manager = TemplateManager(template_dirs)
+        self.image_handler = ImageHandler(base_path)
+        self.mermaid_handler = MermaidHandler()
         
-    def convert(self, markdown_content: str, metadata: Optional[Dict[str, Any]] = None) -> Document:
+    def convert(self, markdown_content: str, metadata: Optional[Dict[str, Any]] = None, template_name: Optional[str] = None) -> Document:
         """Convert markdown content to Word document."""
-        if self.template_path and Path(self.template_path).exists():
-            doc = Document(self.template_path)
+        template_path = None
+        if template_name:
+            template_path = self.template_manager.get_template_path(template_name)
+        elif self.template_path:
+            template_path = self.template_path
+            
+        if template_path and self.template_manager.validate_template(template_path):
+            doc = Document(template_path)
         else:
             doc = Document()
             
         if metadata:
             self._add_metadata(doc, metadata)
             
-        self._convert_content(doc, markdown_content)
+        # Process images and mermaid diagrams
+        processed_content = self.image_handler.process_images(doc, markdown_content)
+        processed_content = self.mermaid_handler.process_mermaid(doc, processed_content)
+            
+        self._convert_content(doc, processed_content)
         return doc
     
     def _add_metadata(self, doc: Document, metadata: Dict[str, Any]) -> None:
