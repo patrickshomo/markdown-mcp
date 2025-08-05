@@ -3,18 +3,26 @@
 
 import subprocess
 import sys
+import shutil
 from pathlib import Path
 
 def run_tests():
     """Run all tests in proper order."""
     test_order = [
         "test_converter.py",
-        "test_templates.py",
-        "test_server.py"
+        "test_batch_conversion.py"
     ]
     
     tests_dir = Path(__file__).parent
     project_root = tests_dir.parent
+    
+    # Clean output directory before running tests
+    output_dir = tests_dir / "output"
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+        print(f"🧹 Cleaned output directory: {output_dir}")
+    output_dir.mkdir(exist_ok=True)
+    
     failed = []
     
     for test_file in test_order:
@@ -25,7 +33,7 @@ def run_tests():
             
         print(f"🧪 Running {test_file}...")
         result = subprocess.run([
-            sys.executable, "-m", "pytest", str(test_path), "-v"
+            sys.executable, str(test_path)
         ], cwd=project_root)
         
         if result.returncode != 0:

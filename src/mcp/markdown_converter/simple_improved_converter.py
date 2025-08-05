@@ -100,13 +100,25 @@ class SimpleImprovedConverter:
             html_content = html_content.replace('&nbsp;', ' ')
             html_content = re.sub(r'<br\\s*/?>', '<br/>', html_content)
             
+            # Handle HTML entities and special characters
+            html_content = html_content.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            
             # Parse HTML
             root = ET.fromstring(f'<root>{html_content}</root>')
-            self._process_html_element(doc, root)
+            
+            # Process all child elements
+            for child in root:
+                self._process_html_element(doc, child)
+                
+            # Handle any remaining text content
+            if root.text and root.text.strip():
+                doc.add_paragraph(root.text.strip())
+                
         except ET.ParseError as e:
             print(f"HTML parsing error: {e}")
-            # Fallback to simple text
-            doc.add_paragraph(html_content)
+            print(f"Problematic HTML: {html_content[:200]}...")
+            # Better fallback - try to extract readable content
+            self._fallback_text_conversion(doc, html_content)
     
     def _process_html_element(self, doc: Document, element: ET.Element, parent_para=None) -> None:
         """Process HTML elements recursively."""
@@ -146,6 +158,10 @@ class SimpleImprovedConverter:
             # Add horizontal rule as empty paragraph
             para = doc.add_paragraph()
             para.add_run("─" * 50)
+            
+        # Handle text content after the element
+        if element.tail and element.tail.strip():
+            doc.add_paragraph(element.tail.strip())
             
         # Process child elements
         for child in element:
@@ -254,6 +270,19 @@ class SimpleImprovedConverter:
             if child.tail:
                 text_parts.append(child.tail)
         return ''.join(text_parts)
+    
+    def _fallback_text_conversion(self, doc: Document, html_content: str) -> None:
+        """Fallback method to extract readable content from HTML."""
+        # Remove HTML tags and convert to readable text
+        text_content = re.sub(r'<[^>]+>', '', html_content)
+        text_content = text_content.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        
+        # Split into paragraphs and add to document
+        paragraphs = text_content.split('\n\n')
+        for para_text in paragraphs:
+            para_text = para_text.strip()
+            if para_text:
+                doc.add_paragraph(para_text)
     
     def validate_markdown(self, markdown_content: str) -> Dict[str, Any]:
         """Validate markdown content for conversion compatibility."""
