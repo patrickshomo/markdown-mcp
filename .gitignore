@@ -49,6 +49,9 @@ Thumbs.db
 test_output.*
 design-input.docx
 
+# Test output files
+tests/output/*
+
 # Design files (private)
 design/
 
