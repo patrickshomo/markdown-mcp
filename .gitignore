@@ -54,3 +54,4 @@ design/
 
 # Amazon Q configuration
 .amazonq/
+.amazonq@
