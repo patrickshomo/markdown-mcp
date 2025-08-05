@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from src.mcp.markdown_converter.converter import MarkdownConverter
+from src.mcp.markdown_converter.simple_improved_converter import SimpleImprovedConverter as MarkdownConverter
 
 
 def test_table_conversion():

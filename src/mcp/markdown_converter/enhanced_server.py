@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from .improved_converter import ImprovedMarkdownConverter
+from .simple_improved_converter import SimpleImprovedConverter as ImprovedMarkdownConverter
 from .template_manager import TemplateManager
 from .batch_processor import BatchProcessor
 

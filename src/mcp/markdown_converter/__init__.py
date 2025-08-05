@@ -1,5 +1,5 @@
 """Markdown to Word MCP Server."""
 
-from .converter import MarkdownConverter
+from .simple_improved_converter import SimpleImprovedConverter
 
-__all__ = ["MarkdownConverter"]
+__all__ = ["SimpleImprovedConverter"]

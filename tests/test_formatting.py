@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import os
 
-from src.mcp.markdown_converter.converter import MarkdownConverter
+from src.mcp.markdown_converter.simple_improved_converter import SimpleImprovedConverter as MarkdownConverter
 
 
 def test_inline_formatting():

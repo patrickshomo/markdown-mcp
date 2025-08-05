@@ -2,7 +2,7 @@
 
 from typing import List, Dict, Any, Optional
 from pathlib import Path
-from .converter import MarkdownConverter
+from .simple_improved_converter import SimpleImprovedConverter as MarkdownConverter
 import os
 
 
