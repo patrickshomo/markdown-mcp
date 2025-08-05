@@ -30,7 +30,7 @@ def convert_markdown_to_docx(
         markdown_content: The markdown text to convert
         template_name: Optional template name (simple, corporate, technical)
         output_path: Optional output file path, defaults to temp file
-        metadata: Optional document metadata (title, author, subject)
+        metadata: Optional document metadata (title, author, subject, keywords, comments)
     
     Returns:
         Path to the generated Word document

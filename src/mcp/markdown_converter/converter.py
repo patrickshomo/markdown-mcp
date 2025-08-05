@@ -2,7 +2,10 @@
 
 from typing import Optional, Dict, Any
 from docx import Document
+from docx.shared import Inches
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from pathlib import Path
+import re
 
 
 class MarkdownConverter:
@@ -31,6 +34,12 @@ class MarkdownConverter:
             core_props.title = metadata['title']
         if 'author' in metadata:
             core_props.author = metadata['author']
+        if 'subject' in metadata:
+            core_props.subject = metadata['subject']
+        if 'keywords' in metadata:
+            core_props.keywords = metadata['keywords']
+        if 'comments' in metadata:
+            core_props.comments = metadata['comments']
             
     def _convert_content(self, doc: Document, content: str) -> None:
         """Convert markdown content to Word paragraphs."""
@@ -56,6 +65,10 @@ class MarkdownConverter:
                 i = self._add_code_block(doc, lines, i)
                 continue
                 
+            if self._is_table_row(line):
+                i = self._add_table(doc, lines, i)
+                continue
+                
             doc.add_paragraph(line)
             i += 1
             
@@ -70,8 +83,62 @@ class MarkdownConverter:
             
         code_text = '\n'.join(code_lines)
         para = doc.add_paragraph(code_text)
-        # Use monospace font for code blocks
+        
+        # Enhanced code block formatting
         for run in para.runs:
             run.font.name = 'Courier New'
+            run.font.size = Inches(0.11)  # 10pt
+        
+        # Add subtle background styling
+        para.style = 'No Spacing'
         
         return i + 1 if i < len(lines) else i
+    
+    def _is_table_row(self, line: str) -> bool:
+        """Check if line is a markdown table row."""
+        return '|' in line and line.strip().startswith('|') and line.strip().endswith('|')
+    
+    def _add_table(self, doc: Document, lines: list, start_idx: int) -> int:
+        """Add markdown table to document."""
+        table_lines = []
+        i = start_idx
+        
+        # Collect all table rows
+        while i < len(lines) and self._is_table_row(lines[i]):
+            table_lines.append(lines[i].strip())
+            i += 1
+            
+        if len(table_lines) < 2:
+            return i
+            
+        # Parse table data
+        rows = []
+        for line in table_lines:
+            # Skip separator rows (contains only |, -, :, spaces)
+            if re.match(r'^\|[\s\-:]+\|$', line):
+                continue
+            cells = [cell.strip() for cell in line.split('|')[1:-1]]
+            if cells:
+                rows.append(cells)
+                
+        if not rows:
+            return i
+            
+        # Create Word table
+        table = doc.add_table(rows=len(rows), cols=len(rows[0]))
+        table.alignment = WD_TABLE_ALIGNMENT.LEFT
+        
+        # Populate table
+        for row_idx, row_data in enumerate(rows):
+            for col_idx, cell_data in enumerate(row_data):
+                if col_idx < len(table.rows[row_idx].cells):
+                    table.rows[row_idx].cells[col_idx].text = cell_data
+                    
+        # Style header row
+        if rows:
+            for cell in table.rows[0].cells:
+                for paragraph in cell.paragraphs:
+                    for run in paragraph.runs:
+                        run.bold = True
+                        
+        return i
