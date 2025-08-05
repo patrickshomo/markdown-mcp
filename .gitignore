@@ -30,7 +30,6 @@ env.bak/
 venv.bak/
 
 # IDE
-.amazonq/
 .vscode/
 .idea/
 *.swp
@@ -52,3 +51,6 @@ design-input.docx
 
 # Design files (private)
 design/
+
+# Amazon Q configuration
+.amazonq/
