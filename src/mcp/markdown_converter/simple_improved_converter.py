@@ -106,10 +106,10 @@ class SimpleImprovedConverter:
             html_content = re.sub(r'<br\s*/?>', '<br/>', html_content)
             html_content = re.sub(r'<hr\s*/?>', '<hr/>', html_content)
             
-            # Handle HTML entities more carefully
-            html_content = html_content.replace('&amp;', '&')
+            # Handle HTML entities more carefully (preserve order)
             html_content = html_content.replace('&lt;', '<')
             html_content = html_content.replace('&gt;', '>')
+            html_content = html_content.replace('&amp;', '&')
             
             # Parse HTML
             root = ET.fromstring(f'<root>{html_content}</root>')
@@ -318,22 +318,86 @@ class SimpleImprovedConverter:
             heading_match = re.match(r'<h([1-6])[^>]*>(.*?)</h[1-6]>', line)
             if heading_match:
                 level = int(heading_match.group(1))
-                text = re.sub(r'<[^>]+>', '', heading_match.group(2))
-                text = text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                text = self._extract_text_with_formatting(heading_match.group(2))
                 doc.add_heading(text, level=level)
                 current_para = None
                 continue
             
-            # Handle other content
-            clean_text = re.sub(r'<[^>]+>', '', line)
-            clean_text = clean_text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            # Handle paragraphs and other content
+            if line.startswith('<p>') and line.endswith('</p>'):
+                content = line[3:-4]  # Remove <p> and </p>
+            else:
+                content = line
             
-            if clean_text:
+            if content:
                 if current_para is None:
                     current_para = doc.add_paragraph()
                 if current_para.text:
                     current_para.add_run(' ')
-                current_para.add_run(clean_text)
+                self._add_formatted_text_to_paragraph(current_para, content)
+    
+    def _extract_text_with_formatting(self, html_text: str) -> str:
+        """Extract plain text from HTML for headings."""
+        text = re.sub(r'<[^>]+>', '', html_text)
+        return text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+    
+    def _add_formatted_text_to_paragraph(self, para, html_content: str) -> None:
+        """Add HTML content to paragraph while preserving inline formatting."""
+        # Simple regex-based approach to handle basic formatting
+        remaining = html_content
+        
+        while remaining:
+            # Look for formatting tags with consistent group numbering
+            strong_match = re.search(r'<(?:strong|b)>(.*?)</(?:strong|b)>', remaining)
+            em_match = re.search(r'<(?:em|i)>(.*?)</(?:em|i)>', remaining)
+            code_match = re.search(r'<code>(.*?)</code>', remaining)
+            del_match = re.search(r'<(?:del|s)>(.*?)</(?:del|s)>', remaining)
+            
+            # Find the earliest match
+            matches = [(m.start(), m, 'strong') for m in [strong_match] if m] + \
+                     [(m.start(), m, 'em') for m in [em_match] if m] + \
+                     [(m.start(), m, 'code') for m in [code_match] if m] + \
+                     [(m.start(), m, 'del') for m in [del_match] if m]
+            
+            if not matches:
+                # No more formatting, add remaining text
+                clean_text = re.sub(r'<[^>]+>', '', remaining)
+                clean_text = clean_text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                if clean_text:
+                    para.add_run(clean_text)
+                break
+            
+            # Sort by position and take the first
+            matches.sort()
+            pos, match, tag_type = matches[0]
+            
+            # Add text before the match
+            if pos > 0:
+                before_text = remaining[:pos]
+                clean_before = re.sub(r'<[^>]+>', '', before_text)
+                clean_before = clean_before.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                if clean_before:
+                    para.add_run(clean_before)
+            
+            # Add the formatted text
+            formatted_text = match.group(1)  # Now always group 1
+            clean_formatted = re.sub(r'<[^>]+>', '', formatted_text)
+            clean_formatted = clean_formatted.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            
+            if clean_formatted:
+                run = para.add_run(clean_formatted)
+                if tag_type == 'strong':
+                    run.bold = True
+                elif tag_type == 'em':
+                    run.italic = True
+                elif tag_type == 'code':
+                    run.font.name = 'Courier New'
+                    run.font.highlight_color = WD_COLOR_INDEX.GRAY_25
+                elif tag_type == 'del':
+                    run.font.strike = True
+            
+            # Continue with remaining text
+            remaining = remaining[match.end():]
     
     def validate_markdown(self, markdown_content: str) -> Dict[str, Any]:
         """Validate markdown content for conversion compatibility."""
