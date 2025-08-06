@@ -12,6 +12,7 @@ import re
 from .template_manager import TemplateManager
 from .image_handler import ImageHandler
 from .mermaid_handler import MermaidHandler
+from .style_mapper import StyleMapper, MarkdownElement
 
 
 class SimpleImprovedConverter:
@@ -22,6 +23,7 @@ class SimpleImprovedConverter:
         self.template_manager = TemplateManager(template_dirs)
         self.image_handler = ImageHandler(base_path)
         self.mermaid_handler = MermaidHandler()
+        self.style_mapper = StyleMapper()
         
         # Configure markdown parser with available extensions
         self.md = markdown.Markdown(extensions=[
@@ -70,6 +72,9 @@ class SimpleImprovedConverter:
     
     def _preprocess_markdown(self, content: str) -> str:
         """Pre-process markdown for features not supported by standard extensions."""
+        # Remove YAML front matter
+        content = re.sub(r'^---\s*\n.*?\n---\s*\n', '', content, flags=re.DOTALL)
+        
         # Handle task lists
         content = re.sub(r'^(\s*)- \[x\]', r'\\1- ☑', content, flags=re.MULTILINE)
         content = re.sub(r'^(\s*)- \[ \]', r'\\1- ☐', content, flags=re.MULTILINE)
@@ -98,10 +103,13 @@ class SimpleImprovedConverter:
         try:
             # Clean up HTML for parsing
             html_content = html_content.replace('&nbsp;', ' ')
-            html_content = re.sub(r'<br\\s*/?>', '<br/>', html_content)
+            html_content = re.sub(r'<br\s*/?>', '<br/>', html_content)
+            html_content = re.sub(r'<hr\s*/?>', '<hr/>', html_content)
             
-            # Handle HTML entities and special characters
-            html_content = html_content.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            # Handle HTML entities more carefully
+            html_content = html_content.replace('&amp;', '&')
+            html_content = html_content.replace('&lt;', '<')
+            html_content = html_content.replace('&gt;', '>')
             
             # Parse HTML
             root = ET.fromstring(f'<root>{html_content}</root>')
@@ -131,6 +139,10 @@ class SimpleImprovedConverter:
             
         elif tag == 'p':
             para = doc.add_paragraph()
+            # Apply paragraph style
+            word_style = self.style_mapper.get_style_for_html_tag(tag)
+            if word_style:
+                self.style_mapper.apply_style_to_paragraph(para, word_style)
             self._process_inline_elements(para, element)
             
         elif tag == 'pre':
@@ -151,7 +163,12 @@ class SimpleImprovedConverter:
             
         elif tag == 'blockquote':
             para = doc.add_paragraph()
-            para.style = 'Quote'
+            # Apply blockquote style using mapper
+            word_style = self.style_mapper.get_style_for_html_tag(tag)
+            if word_style:
+                self.style_mapper.apply_style_to_paragraph(para, word_style)
+            else:
+                para.style = 'Quote'  # Fallback
             self._process_inline_elements(para, element)
             
         elif tag == 'hr':
@@ -176,30 +193,29 @@ class SimpleImprovedConverter:
             tag = child.tag.lower()
             text = self._get_element_text(child)
             
-            if tag == 'strong' or tag == 'b':
-                run = para.add_run(text)
-                run.bold = True
-            elif tag == 'em' or tag == 'i':
-                run = para.add_run(text)
-                run.italic = True
-            elif tag == 'code':
-                run = para.add_run(text)
-                run.font.name = 'Courier New'
-                # Add light gray background effect
-                run.font.highlight_color = WD_COLOR_INDEX.GRAY_25
-            elif tag == 'del' or tag == 's':
-                run = para.add_run(text)
-                run.font.strike = True
-            elif tag == 'a':
-                # Handle links
-                href = child.get('href', '')
-                run = para.add_run(text)
-                run.font.color.rgb = RGBColor(0, 0, 255)
-                run.underline = True
-            elif tag == 'br':
+            if tag == 'br':
                 para.add_run().add_break()
             else:
-                para.add_run(text)
+                run = para.add_run(text)
+                
+                # Apply style using mapper
+                word_style = self.style_mapper.get_style_for_html_tag(tag)
+                if word_style:
+                    self.style_mapper.apply_style_to_run(run, word_style)
+                else:
+                    # Fallback to original logic
+                    if tag == 'strong' or tag == 'b':
+                        run.bold = True
+                    elif tag == 'em' or tag == 'i':
+                        run.italic = True
+                    elif tag == 'code':
+                        run.font.name = 'Courier New'
+                        run.font.highlight_color = WD_COLOR_INDEX.GRAY_25
+                    elif tag == 'del' or tag == 's':
+                        run.font.strike = True
+                    elif tag == 'a':
+                        run.font.color.rgb = RGBColor(0, 0, 255)
+                        run.underline = True
                 
             if child.tail:
                 para.add_run(child.tail)
@@ -211,10 +227,17 @@ class SimpleImprovedConverter:
         
         para = doc.add_paragraph(code_text)
         
-        # Enhanced code block formatting
-        for run in para.runs:
-            run.font.name = 'Courier New'
-            run.font.size = Inches(0.11)  # 10pt
+        # Apply code block style using mapper
+        word_style = self.style_mapper.get_word_style(MarkdownElement.CODE_BLOCK)
+        if word_style:
+            self.style_mapper.apply_style_to_paragraph(para, word_style)
+            for run in para.runs:
+                self.style_mapper.apply_style_to_run(run, word_style)
+        else:
+            # Fallback formatting
+            for run in para.runs:
+                run.font.name = 'Courier New'
+                run.font.size = Inches(0.11)  # 10pt
             
         # Add language label if available
         if language:
@@ -258,7 +281,15 @@ class SimpleImprovedConverter:
         """Add ordered or unordered list."""
         for li_elem in list_element.findall('li'):
             text = self._get_element_text(li_elem)
-            para = doc.add_paragraph(text, style='List Bullet' if not ordered else 'List Number')
+            para = doc.add_paragraph(text)
+            # Apply list style using mapper
+            element = MarkdownElement.UNORDERED_LIST if not ordered else MarkdownElement.ORDERED_LIST
+            word_style = self.style_mapper.get_word_style(element)
+            if word_style:
+                self.style_mapper.apply_style_to_paragraph(para, word_style)
+            else:
+                # Fallback
+                para.style = 'List Bullet' if not ordered else 'List Number'
     
     def _get_element_text(self, element: ET.Element) -> str:
         """Get all text content from an element."""
@@ -272,17 +303,37 @@ class SimpleImprovedConverter:
         return ''.join(text_parts)
     
     def _fallback_text_conversion(self, doc: Document, html_content: str) -> None:
-        """Fallback method to extract readable content from HTML."""
-        # Remove HTML tags and convert to readable text
-        text_content = re.sub(r'<[^>]+>', '', html_content)
-        text_content = text_content.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+        """Fallback method to extract readable content from HTML while preserving basic formatting."""
+        # Process line by line to preserve structure
+        lines = html_content.split('\n')
+        current_para = None
         
-        # Split into paragraphs and add to document
-        paragraphs = text_content.split('\n\n')
-        for para_text in paragraphs:
-            para_text = para_text.strip()
-            if para_text:
-                doc.add_paragraph(para_text)
+        for line in lines:
+            line = line.strip()
+            if not line:
+                current_para = None
+                continue
+                
+            # Handle headings
+            heading_match = re.match(r'<h([1-6])[^>]*>(.*?)</h[1-6]>', line)
+            if heading_match:
+                level = int(heading_match.group(1))
+                text = re.sub(r'<[^>]+>', '', heading_match.group(2))
+                text = text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+                doc.add_heading(text, level=level)
+                current_para = None
+                continue
+            
+            # Handle other content
+            clean_text = re.sub(r'<[^>]+>', '', line)
+            clean_text = clean_text.replace('&lt;', '<').replace('&gt;', '>').replace('&amp;', '&')
+            
+            if clean_text:
+                if current_para is None:
+                    current_para = doc.add_paragraph()
+                if current_para.text:
+                    current_para.add_run(' ')
+                current_para.add_run(clean_text)
     
     def validate_markdown(self, markdown_content: str) -> Dict[str, Any]:
         """Validate markdown content for conversion compatibility."""
