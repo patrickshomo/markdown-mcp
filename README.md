@@ -1,28 +1,23 @@
 # Markdown to Word MCP Server
 
-FastMCP server that converts Markdown documents to Microsoft Word format with **full GitHub Flavored Markdown (GFM) support** and professional formatting.
+**Pandoc-powered** FastMCP server that converts Markdown documents to Microsoft Word format with **complete GitHub Flavored Markdown (GFM) support**.
 
 ## Features
 
-### ✅ Fully Implemented
-- **GFM Compliance** - Complete GitHub Flavored Markdown support
-- **Task Lists** - Checkbox rendering (`- [x]` → ☑, `- [ ]` → ☐)
-- **Tables** - Full GFM table support with alignment
-- **Strikethrough** - `~~text~~` formatting support
-- **Code Blocks** - Fenced code blocks with language detection
-- **Enhanced Formatting** - Complex emphasis, links, images
-- **Template System** - Corporate, technical, and simple templates
-- **Image Handling** - Embed images referenced in markdown
-- **Mermaid Diagrams** - Convert diagrams to embedded images
+### ✅ Pandoc-Powered Implementation
+- **Perfect GFM Support** - Pandoc handles all GitHub Flavored Markdown features
+- **Zero Mapping Complexity** - No manual style management needed
+- **Battle-Tested** - Uses Pandoc, the gold standard for document conversion
+- **Clean Codebase** - ~100 lines vs 1000+ lines of manual mapping
+- **All GFM Features** - Task lists, tables, strikethrough, code blocks, everything
 - **Batch Processing** - Convert entire directories
-- **Validation** - Comprehensive markdown analysis and feature detection
-- **Metadata Injection** - Document properties (title, author, subject)
+- **Validation** - Markdown analysis and feature detection
+- **Metadata Support** - Document properties (title, author)
 
 ## MCP Functions
 
-- `convert_markdown_to_docx()` - Convert markdown with full GFM support
+- `convert_markdown_to_docx()` - Convert markdown using Pandoc with full GFM support
 - `validate_markdown_compatibility()` - Analyze markdown features and compatibility
-- `list_available_templates()` - List available Word templates
 - `batch_convert_directory()` - Convert entire directories
 - `get_conversion_features()` - Get supported features and capabilities
 
@@ -30,11 +25,14 @@ FastMCP server that converts Markdown documents to Microsoft Word format with **
 
 ### Basic Conversion
 ```python
-from src.mcp.markdown_converter.simple_improved_converter import SimpleImprovedConverter
+from src.mcp.markdown_converter.pandoc_converter import PandocConverter
 
-converter = SimpleImprovedConverter()
-doc = converter.convert(markdown_content, {"title": "My Document"})
-doc.save("output.docx")
+converter = PandocConverter()
+output_path = converter.convert(
+    markdown_content, 
+    "output.docx",
+    {"title": "My Document", "author": "Author Name"}
+)
 ```
 
 ### With Validation
@@ -43,7 +41,7 @@ doc.save("output.docx")
 validation = converter.validate_markdown(markdown_content)
 if validation['valid']:
     print(f"Features: {validation['features_detected']}")
-    doc = converter.convert(markdown_content)
+    converter.convert(markdown_content, "output.docx")
 ```
 
 ### Supported GFM Features
@@ -65,8 +63,12 @@ Perfect for:
 ## Structure
 
 - `src/mcp/markdown_converter/` - MCP server implementation
-  - `simple_improved_converter.py` - Enhanced GFM-compliant converter
-  - `enhanced_server.py` - Full-featured MCP server
-- `tests/` - Comprehensive test suite
-- `CONVERSION_IMPROVEMENTS.md` - Detailed feature comparison
-- `IMPLEMENTATION_SUMMARY.md` - Complete implementation guide
+  - `pandoc_converter.py` - Pandoc-powered converter (clean & minimal)
+  - `server.py` - FastMCP server with all functions
+- `tests/` - Test suite including Pandoc converter tests
+- `run_mcp_server.py` - MCP server runner
+
+## Requirements
+
+- **Pandoc** - Install with `brew install pandoc` (macOS) or equivalent
+- **Python 3.11+** with dependencies from `pyproject.toml`
