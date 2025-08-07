@@ -23,7 +23,7 @@ def convert_markdown_to_docx(
     
     Args:
         markdown_content: The markdown text to convert
-        output_filename: Name for the output file
+        output_filename: Name for the output file. If markdown_content came from an input file, the output file default name is the input_file name with the .docx extension.
         title: Document title (optional)
         author: Document author (optional)
     
@@ -124,6 +124,7 @@ def get_conversion_features() -> Dict[str, Any]:
     return {
         'converter': 'pandoc',
         'supported_features': [
+            'Markdown',
             'GitHub Flavored Markdown (GFM)',
             'Task lists (checkboxes)',
             'Tables with alignment',
@@ -137,7 +138,7 @@ def get_conversion_features() -> Dict[str, Any]:
             'Headers (H1-H6)',
             'Horizontal rules'
         ],
-        'input_format': 'gfm',
+        'input_format': 'md',
         'output_format': 'docx',
         'metadata_support': ['title', 'author'],
         'batch_processing': True

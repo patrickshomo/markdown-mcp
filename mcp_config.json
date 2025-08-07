@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "markdown-converter": {
+      "command": "uv",
+      "args": ["run", "python", "run_mcp_server.py"],
+      "cwd": "/Users/pat/Documents/Dev/markdown-mcp"
+    }
+  }
+}
